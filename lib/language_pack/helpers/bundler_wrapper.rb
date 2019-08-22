@@ -103,13 +103,19 @@ class LanguagePack::Helpers::BundlerWrapper
 
   def initialize(
       bundler_path: nil,
-      gemfile_path: Pathname.new("./Gemfile"),
+      gemfile_path: nil,
       report: HerokuBuildReport::GLOBAL
     )
+    options = {
+      bundler_path: bundler_path,
+      gemfile_path: gemfile_path,
+      report: report,
+    }
+    puts "-----> BundlerWrapper#initialize: options=#{options.inspect}"
     @report               = report
     @bundler_tmp          = Pathname.new(Dir.mktmpdir)
     @fetcher              = LanguagePack::Fetcher.new(LanguagePack::Base::VENDOR_URL) # coupling
-    @gemfile_path         = gemfile_path
+    @gemfile_path         = gemfile_path || env('BUNDLE_GEMFILE') || Pathname.new("./Gemfile")
     @gemfile_lock_path    = Pathname.new("#{@gemfile_path}.lock")
 
     contents = @gemfile_lock_path.read(mode: "rt")
@@ -138,13 +144,13 @@ class LanguagePack::Helpers::BundlerWrapper
 
     @bundler_path         = bundler_path || @bundler_tmp.join(@dir_name)
     @bundler_tar          = "bundler/#{@dir_name}.tgz"
-    @orig_bundle_gemfile  = ENV['BUNDLE_GEMFILE']
+    @orig_bundle_gemfile  = env('BUNDLE_GEMFILE')
     @path                 = Pathname.new("#{@bundler_path}/gems/#{@dir_name}/lib")
   end
 
   def install
     ENV['BUNDLE_GEMFILE'] = @gemfile_path.to_s
-
+    puts "-----> BundleWrapper#install: Setting ENV['BUNDLE_GEMFILE'] to #{@gemfile_path.inspect}"
     fetch_bundler
     $LOAD_PATH << @path
     require "bundler"
@@ -152,6 +158,7 @@ class LanguagePack::Helpers::BundlerWrapper
   end
 
   def clean
+    puts "-----> BundleWrapper#clean: setting BUNDLE_GEMFILE back to #{@orig_bundle_gemfile.inspect}"
     ENV['BUNDLE_GEMFILE'] = @orig_bundle_gemfile
     @bundler_tmp.rmtree if @bundler_tmp.directory?
   end

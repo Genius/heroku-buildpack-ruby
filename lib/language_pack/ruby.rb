@@ -23,7 +23,13 @@ class LanguagePack::Ruby < LanguagePack::Base
   end
 
   def self.bundler
-    @@bundler ||= LanguagePack::Helpers::BundlerWrapper.new.install
+    @@bundler ||= begin
+      original_gemfile_path = env('BUNDLE_GEMFILE') || './Gemfile'
+      expanded_gemfile_path = Pathname.new(original_gemfile_path).expand_path.to_s
+      ENV['BUNDLE_GEMFILE'] = user_env_hash['BUNDLE_GEMFILE'] = expanded_gemfile_path
+      puts "-----> LanguagePack::Ruby.bundler: Expanding BUNDLE_GEMFILE (#{original_gemfile_path}) to #{expanded_gemfile_path}"
+      LanguagePack::Helpers::BundlerWrapper.new(gemfile_path: expanded_gemfile_path).install
+    end
   end
 
   def bundler
@@ -684,7 +690,7 @@ private
 
   # runs bundler to install the dependencies
   def build_bundler
-    if File.exist?("#{Dir.pwd}/.bundle/config")
+      if File.exist?("#{Dir.pwd}/.bundle/config")
       warn(<<~WARNING, inline: true)
         You have the `.bundle/config` file checked into your repository
           It contains local state like the location of the installed bundle
@@ -695,6 +701,16 @@ private
         https://devcenter.heroku.com/articles/bundler-configuration
       WARNING
     end
+
+    # bundle_without = env("BUNDLE_WITHOUT") || default_bundle_without
+    # bundle_bin     = "bundle"
+    # relative_gemfile = env("BUNDLE_GEMFILE").sub("#{Dir.pwd}/", "")
+    # puts "----> pwd: #{Dir.pwd}"
+    # puts "----> relative gemfile: #{relative_gemfile}"
+    # relative_path  = ['..' * (relative_gemfile.split('/').length - 1), "vendor/bundle"].reject(&:empty?).join('/')
+    # puts "----> relative path: #{relative_path}"
+    # bundle_command = "#{bundle_bin} install --without #{bundle_without} --path #{relative_path} --binstubs #{bundler_binstubs_path}"
+    # bundle_command << " -j4"
 
     bundle_command = String.new("")
     bundle_command << "BUNDLE_WITHOUT='#{ENV["BUNDLE_WITHOUT"]}' "
@@ -713,7 +729,7 @@ private
 
     # we need to set BUNDLE_CONFIG and BUNDLE_GEMFILE for
     # codon since it uses bundler.
-    env_vars["BUNDLE_GEMFILE"] = "#{pwd}/Gemfile"
+    env_vars["BUNDLE_GEMFILE"] = env('BUNDLE_GEMFILE') || "#{pwd}/Gemfile"
     env_vars["BUNDLE_CONFIG"] = "#{pwd}/.bundle/config"
     env_vars["NOKOGIRI_USE_SYSTEM_LIBRARIES"] = "true"
     env_vars["BUNDLE_DISABLE_VERSION_CHECK"] = "true"
@@ -844,6 +860,7 @@ private
       raise_on_fail = bundler.gem_version('railties') && bundler.gem_version('railties') > Gem::Version.new('3.x')
 
       topic "Detecting rake tasks"
+      puts "-----> LanguagePack::Ruby#rake: BUNDLE_GEMFILE is (#{rake_env['BUNDLE_GEMFILE'].inspect})"
       rake = LanguagePack::Helpers::RakeRunner.new
       rake.load_rake_tasks!({ env: rake_env }, raise_on_fail)
       rake
