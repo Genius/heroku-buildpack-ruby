@@ -1108,7 +1108,7 @@ params = CGI.parse(uri.query || "")
   end
 
   def seed_db_for_review_app
-    if ENV.fetch('HEROKU_PR_NUMBER', nil).nil?
+    if env("HEROKU_PR_NUMBER").nil?
       puts "Skipping minimal review app seeding, `HEROKU_PR_NUMBER` is not set"
       return
     end
