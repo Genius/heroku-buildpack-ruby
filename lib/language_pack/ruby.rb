@@ -1114,7 +1114,7 @@ params = CGI.parse(uri.query || "")
     end
 
     prepare = rake.task("db:review_app:prepare")
-    return error "Can't find db:seed:minimal rake task, but we need it for rapgenius review apps!" unless prepare.is_defined?
+    return error "Can't find db:review_app:prepare rake task, but we need it for rapgenius review apps!" unless prepare.is_defined?
 
     topic "Seeding minimal db for review apps"
     prepare.invoke(env: rake_env)
