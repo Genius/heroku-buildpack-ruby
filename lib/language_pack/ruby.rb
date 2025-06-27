@@ -95,6 +95,7 @@ WARNING
       post_bundler
       create_database_yml
       install_binaries
+      seed_db_for_review_app
       run_assets_precompile_rake_task
     end
     config_detect
@@ -1106,8 +1107,26 @@ params = CGI.parse(uri.query || "")
     !yarn_preinstalled?
   end
 
-  def run_assets_precompile_rake_task
+  def seed_db_for_review_app
+    if env("HEROKU_PR_NUMBER").nil?
+      puts "Skipping minimal review app seeding, `HEROKU_PR_NUMBER` is not set"
+      return
+    end
 
+    prepare = rake.task("db:review_app:prepare")
+    return error "Can't find db:review_app:prepare rake task, but we need it for rapgenius review apps!" unless prepare.is_defined?
+
+    topic "Seeding minimal db for review apps"
+    prepare.invoke(env: rake_env)
+    if prepare.success?
+      puts "Minimal seeding completed (#{"%.2f" % prepare.time}s)"
+    else
+      log "seed_db_for_review_app", :status => "failure"
+      error "Failed to seed the review app database. Check the logs above to see what happened."
+    end
+  end
+
+  def run_assets_precompile_rake_task
     precompile = rake.task("assets:precompile")
     return true unless precompile.is_defined?
 
