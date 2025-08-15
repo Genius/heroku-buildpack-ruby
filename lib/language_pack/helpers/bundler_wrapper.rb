@@ -105,9 +105,10 @@ class LanguagePack::Helpers::BundlerWrapper
   attr_reader :bundler_path
 
   def initialize(options = {})
+    puts "-----> BundlerWrapper#initialize: options=#{options.inspect}"
     @bundler_tmp          = Pathname.new(Dir.mktmpdir)
     @fetcher              = options[:fetcher]      || LanguagePack::Fetcher.new(LanguagePack::Base::VENDOR_URL) # coupling
-    @gemfile_path         = options[:gemfile_path] || Pathname.new("./Gemfile")
+    @gemfile_path         = options[:gemfile_path] || ENV['BUNDLE_GEMFILE'] || Pathname.new("./Gemfile")
     @gemfile_lock_path    = Pathname.new("#{@gemfile_path}.lock")
 
     @version = self.class.detect_bundler_version(contents: @gemfile_lock_path.read(mode: "rt"))
@@ -120,6 +121,7 @@ class LanguagePack::Helpers::BundlerWrapper
   end
 
   def install
+    puts "-----> BundleWrapper#install: Setting ENV['BUNDLE_GEMFILE'] to #{@gemfile_path.inspect}"
     ENV['BUNDLE_GEMFILE'] = @gemfile_path.to_s
 
     fetch_bundler
@@ -129,6 +131,7 @@ class LanguagePack::Helpers::BundlerWrapper
   end
 
   def clean
+    puts "-----> BundleWrapper#clean: setting BUNDLE_GEMFILE back to #{@orig_bundle_gemfile.inspect}"
     ENV['BUNDLE_GEMFILE'] = @orig_bundle_gemfile
     @bundler_tmp.rmtree if @bundler_tmp.directory?
   end

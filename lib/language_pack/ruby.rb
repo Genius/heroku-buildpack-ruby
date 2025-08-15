@@ -25,7 +25,14 @@ class LanguagePack::Ruby < LanguagePack::Base
   end
 
   def self.bundler
-    @@bundler ||= LanguagePack::Helpers::BundlerWrapper.new.install
+    # @@bundler ||= LanguagePack::Helpers::BundlerWrapper.new.install
+    @@bundler ||= begin
+      original_gemfile_path = "gemfiles/rails_3.gemfile" # env('BUNDLE_GEMFILE') || './Gemfile'
+      expanded_gemfile_path = Pathname.new(original_gemfile_path).expand_path.to_s
+      ENV['BUNDLE_GEMFILE'] = user_env_hash['BUNDLE_GEMFILE'] = expanded_gemfile_path
+      puts "-----> LanguagePack::Ruby.bundler: Expanding BUNDLE_GEMFILE (#{original_gemfile_path}) to #{expanded_gemfile_path}"
+      LanguagePack::Helpers::BundlerWrapper.new(gemfile_path: expanded_gemfile_path).install
+    end
   end
 
   def bundler
@@ -754,6 +761,12 @@ BUNDLE
         end
       end
 
+      relative_gemfile = env("BUNDLE_GEMFILE").sub("#{Dir.pwd}/", "")
+      puts "----> pwd: #{Dir.pwd}"
+      puts "----> relative gemfile: #{relative_gemfile}"
+      relative_path  = ['..' * (relative_gemfile.split('/').length - 1), "vendor/bundle"].reject(&:empty?).join('/')
+      puts "----> relative path: #{relative_path}"
+
       bundle_command = String.new("")
       bundle_command << "BUNDLE_WITHOUT='#{ENV["BUNDLE_WITHOUT"]}' "
       bundle_command << "BUNDLE_PATH=#{ENV["BUNDLE_PATH"]} "
@@ -761,7 +774,7 @@ BUNDLE
       bundle_command << "BUNDLE_SPECIFIC_PLATFORM=#{ENV["BUNDLE_SPECIFIC_PLATFORM"]} "
       bundle_command << "BUNDLE_DEPLOYMENT=#{ENV["BUNDLE_DEPLOYMENT"]} " if ENV["BUNDLE_DEPLOYMENT"] # Unset on windows since we delete the Gemfile.lock
       bundle_command << "BUNDLE_GLOBAL_PATH_APPENDS_RUBY_SCOPE=#{ENV["BUNDLE_GLOBAL_PATH_APPENDS_RUBY_SCOPE"]} " if bundler.needs_ruby_global_append_path?
-      bundle_command << "bundle install -j4"
+      bundle_command << "bundle install --path #{relative_path} -j4"
 
       topic("Installing dependencies using bundler #{bundler.version}")
 
@@ -779,7 +792,7 @@ BUNDLE
 
         # we need to set BUNDLE_CONFIG and BUNDLE_GEMFILE for
         # codon since it uses bundler.
-        env_vars["BUNDLE_GEMFILE"] = "#{pwd}/Gemfile"
+        env_vars["BUNDLE_GEMFILE"] = env("BUNDLE_GEMFILE") || "#{pwd}/Gemfile"
         env_vars["BUNDLE_CONFIG"] = "#{pwd}/.bundle/config"
         env_vars["CPATH"] = noshellescape("#{yaml_include}:$CPATH")
         env_vars["CPPATH"] = noshellescape("#{yaml_include}:$CPPATH")
@@ -935,6 +948,7 @@ params = CGI.parse(uri.query || "")
       raise_on_fail      = bundler.gem_version('railties') && bundler.gem_version('railties') > Gem::Version.new('3.x')
 
       topic "Detecting rake tasks"
+      puts "-----> LanguagePack::Ruby#rake: BUNDLE_GEMFILE is (#{rake_env['BUNDLE_GEMFILE'].inspect})"
       rake = LanguagePack::Helpers::RakeRunner.new(rake_gem_available)
       rake.load_rake_tasks!({ env: rake_env }, raise_on_fail)
       rake

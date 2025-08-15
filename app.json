@@ -1,6 +1,11 @@
 {
   "name": "Heroku Buildpack Ruby",
   "description": "The buildpack for Ruby",
+  "env": {
+    "BUNDLE_GEMFILE": {
+      "value": "gemfiles/rails_3.gemfile"
+    }
+  },
   "environments": {
     "test": {
       "addons": [
