@@ -1,6 +1,6 @@
 [buildpack]
 name = "Ruby"
-ruby_version = "3.3.9"
+ruby_version = "2.6.9"
 
 [publish.Ignore]
 files = [
@@ -13,3 +13,10 @@ files = [
   "hatchet.json",
   "hatchet.lock",
 ]
+
+[[publish.Vendor]]
+url = "https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com/ruby-2.6.9.tgz"
+dir = "vendor/ruby/heroku-24"
+
+[[stacks]]
+id = "heroku-24"
