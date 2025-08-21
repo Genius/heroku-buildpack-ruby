@@ -28,11 +28,14 @@ curl_retry_on_18() {
 ruby_url() {
   local stack=$1
   local version=$2
+  local external_app=$3
 
   if [ "$stack" == "heroku-24" ]; then
     local arch
     arch=$(dpkg --print-architecture)
     echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-ruby.s3.us-east-1.amazonaws.com}/$stack/$arch/ruby-$version.tgz"
+  else [ "$external_app" == "depanneur" ]; then
+    echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com}/ruby-2.6.9.tgz"
   else
     echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-ruby.s3.us-east-1.amazonaws.com}/$stack/ruby-$version.tgz"
   fi
@@ -42,7 +45,9 @@ ruby_url() {
 regex=".*ruby_version = [\'\"]([0-9]+\.[0-9]+\.[0-9]+)[\'\"].*"
 if [[ $(cat "$BIN_DIR/../buildpack.toml") =~ $regex ]]
   then
-    heroku_buildpack_ruby_url=$(ruby_url "$STACK" "${BASH_REMATCH[1]}")
+    local ruby_version = ASH_REMATCH[1]
+    local app = $(cat "$BIN_DIR/../buildpack.toml") =~ ".*app = [\'\"](\w+)[\'\"].*"
+    heroku_buildpack_ruby_url=$(ruby_url "$STACK" "$ruby_version" "$app[1]")
   else
     heroku_buildpack_ruby_url=""
     echo "Could not detect ruby version to bootstrap"
