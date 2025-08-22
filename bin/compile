@@ -3,6 +3,7 @@
 # bootstraps the ruby needed and then executes `bin/support/ruby_compile`
 
 set -euo pipefail
+set -x
 
 BUILD_DIR=$1
 CACHE_DIR=$2
