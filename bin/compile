@@ -1,19 +1,46 @@
 #!/usr/bin/env bash
+# The actual compilation code lives in `bin/support/ruby_compile`. This file instead
+# bootstraps the ruby needed and then executes `bin/support/ruby_compile`
+
+set -euo pipefail
 
 BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
 BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd) # absolute path
 
+# shellcheck source=bin/support/bash_functions.sh
+source "$BIN_DIR/support/bash_functions.sh"
+
+checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
+
 bootstrap_ruby_dir=$(mktemp -d)
 "$BIN_DIR"/support/download_ruby "$BIN_DIR" "$bootstrap_ruby_dir"
 trap 'rm -rf "$bootstrap_ruby_dir"' EXIT
 
-echo "-----> Ruby downloaded to: $bootstrap_ruby_dir"
+# These exports are for clarity and for any sub-processes
+export PATH="$bootstrap_ruby_dir/bin:$PATH"
+export LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib:${LD_LIBRARY_PATH:-}"
+export RUBYLIB="$bootstrap_ruby_dir/lib:$bootstrap_ruby_dir/lib/ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0/x86_64-linux:${RUBYLIB:-}"
 
-# Add your debugging commands here
-ls -l "$bootstrap_ruby_dir/lib/libruby.so.2.6"
-file "$bootstrap_ruby_dir/lib/libruby.so.2.6"
-ldd "$bootstrap_ruby_dir/lib/libruby.so.2.6"
+unset GEM_PATH
 
-echo "-----> All debugging commands executed. Script exiting."
+if detect_needs_java "$BUILD_DIR"; then
+  cat <<EOM
+
+       ## Warning: Your app needs java
+
+       The Ruby buildpack determined your app needs java installed
+       we recommend you add the jvm buildpack to your application:
+
+         $ heroku buildpacks:add heroku/jvm --index=1
+
+-----> Installing Java
+
+EOM
+
+  compile_buildpack_v2 "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR" "https://buildpack-registry.s3.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz" "heroku/jvm"
+fi
+
+# FINAL FIX: Set all required environment variables directly on the command line
+LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib" RUBYLIB="$bootstrap_ruby_dir/lib:$bootstrap_ruby_dir/lib/ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0/x86_64-linux" "$bootstrap_ruby_dir"/bin/ruby -I"$bootstrap_ruby_dir/lib" "$BIN_DIR/support/ruby_compile" "$@"
