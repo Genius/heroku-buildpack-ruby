@@ -33,20 +33,22 @@ echo "-----> Compiling and installing OpenSSL 1.1.1u"
 curl -L -o /tmp/openssl-1.1.1u.tar.gz https://www.openssl.org/source/openssl-1.1.1u.tar.gz
 tar -xzf /tmp/openssl-1.1.1u.tar.gz -C /tmp
 
-cd /tmp/openssl-1.1.1u
-./config --prefix="$openssl_install_dir" shared
-make
-make install
+pushd /tmp/openssl-1.1.1u
+  ./config --prefix="$openssl_install_dir" shared
+  make
+  make install
+popd
 
 # --- Compile and install Ruby 2.6.9 ---
 echo "-----> Compiling and installing Ruby 2.6.9"
 curl -L -o /tmp/ruby-2.6.9.tar.gz https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.9.tar.gz
 tar -xzf /tmp/ruby-2.6.9.tar.gz -C /tmp
 
-cd /tmp/ruby-2.6.9
-./configure --prefix="$ruby_install_dir" --with-openssl-dir="$openssl_install_dir"
-make
-make install
+pushd /tmp/ruby-2.6.9
+  ./configure --prefix="$ruby_install_dir" --with-openssl-dir="$openssl_install_dir"
+  make
+  make install
+popd
 
 # --- Clean up source code ---
 echo "-----> Cleaning up temporary files"
