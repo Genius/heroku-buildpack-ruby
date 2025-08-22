@@ -69,7 +69,7 @@ export LD_LIBRARY_PATH="$ruby_install_dir/lib:$openssl_install_dir/lib:${LD_LIBR
 
 # --- Install Bundler and Gems ---
 echo "-----> Installing Bundler"
-"$ruby_install_dir"/bin/gem install bundler --no-document --no-user-install
+"$ruby_install_dir"/bin/gem install bundler -v '2.3.26' --no-document --no-user-install
 
 echo "-----> Installing application gems"
 # This command runs Bundler and installs gems into a vendor directory
