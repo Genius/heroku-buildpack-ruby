@@ -29,6 +29,12 @@ ruby_url() {
   local stack=$1
   local version=$2
 
+  if [[ "$version" = "2.6.9" ]]; then
+    # This points to the file we placed in the vendor directory.
+    echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com}/ruby-2.6.9.tar.gz"
+    return
+  fi
+
   if [ "$stack" == "heroku-24" ]; then
     local arch
     arch=$(dpkg --print-architecture)

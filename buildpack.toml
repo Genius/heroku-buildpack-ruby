@@ -1,6 +1,15 @@
 [buildpack]
-name = "heroku/ruby"
-version = "2.6.9"
-uri = "https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com/ruby-2.6.9-heroku-22.tar.gz"
-sha256 = "0fc1115e83cedc063725fa57bed9c399c80a67ac179a9ba3d145d457aabb6409"
-stacks = ["heroku-22"]
+name = "Ruby"
+ruby_version = "3.3.9"
+
+[publish.Ignore]
+files = [
+  "changelogs/",
+  "spec/",
+  "Gemfile",
+  "Gemfile.lock",
+  "Rakefile",
+  "app.json",
+  "hatchet.json",
+  "hatchet.lock",
+]
