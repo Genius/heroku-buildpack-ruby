@@ -8,6 +8,8 @@ BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
 BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+APP_PATH="$BUILD_DIR"
+VENDOR_DIR="$APP_PATH/vendor"
 
 # shellcheck source=bin/support/bash_functions.sh
 source "$BIN_DIR/support/bash_functions.sh"
@@ -65,18 +67,20 @@ echo "-----> Setting up environment variables"
 export PATH="$ruby_install_dir/bin:$PATH"
 export LD_LIBRARY_PATH="$ruby_install_dir/lib:$openssl_install_dir/lib:${LD_LIBRARY_PATH:-}"
 
-unset GEM_PATH
+# --- Install Bundler and Gems ---
+echo "-----> Installing Bundler"
+"$ruby_install_dir"/bin/gem install bundler --no-document --no-user-install
 
-if detect_needs_java "$BUILD_DIR"; then
-  cat <<EOM
-       ## Warning: Your app needs java
-       The Ruby buildpack determined your app needs java installed
-       we recommend you add the jvm buildpack to your application:
-         $ heroku buildpacks:add heroku/jvm --index=1
------> Installing Java
-EOM
-  compile_buildpack_v2 "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR" "https://buildpack-registry.s3.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz" "heroku/jvm"
+echo "-----> Installing application gems"
+# This command runs Bundler and installs gems into a vendor directory
+"$ruby_install_dir"/bin/bundle install --path "$VENDOR_DIR/bundle" --without development:test --jobs $(nproc)
+
+# --- Precompile assets for Rails apps ---
+if grep -q "rails" "$APP_PATH/Gemfile.lock"; then
+  echo "-----> Detecting Rails application"
+  echo "-----> Precompiling assets"
+  # This section assumes a standard Rails app.
+  "$ruby_install_dir"/bin/bundle exec rake assets:precompile
 fi
 
-# The final command that hands off to the rest of the buildpack's logic
-"$ruby_install_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
+echo "-----> Buildpack finished successfully!"
