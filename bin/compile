@@ -1,30 +1,44 @@
 #!/usr/bin/env bash
+# The actual compilation code lives in `bin/support/ruby_compile`. This file instead
+# bootstraps the ruby needed and then executes `bin/support/ruby_compile`
 
-# This will print every command as it's being executed
-set -x
+set -euo pipefail
 
 BUILD_DIR=$1
-BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+CACHE_DIR=$2
+ENV_DIR=$3
+BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd) # absolute path
 
-# Define the path to your tarball
-custom_ruby_tarball_path="$(dirname "$BIN_DIR")/vendor/ruby-custom/ruby-2.6.9.tar.gz"
+# shellcheck source=bin/support/bash_functions.sh
+source "$BIN_DIR/support/bash_functions.sh"
 
-# Define the path where the tarball should be extracted
-ruby_install_dir="$BUILD_DIR/vendor/ruby-custom"
+checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
 
-# Show the path we are about to use
-echo "Attempting to extract tarball from: $custom_ruby_tarball_path"
+bootstrap_ruby_dir=$(mktemp -d)
+"$BIN_DIR"/support/download_ruby "$BIN_DIR" "$bootstrap_ruby_dir"
+trap 'rm -rf "$bootstrap_ruby_dir"' EXIT
 
-# List the contents of the directory containing the tarball
-ls -l "$(dirname "$custom_ruby_tarball_path")"
+export PATH="$bootstrap_ruby_dir/bin/:$PATH"
+# FIX: Add the LD_LIBRARY_PATH to tell the system where to find libruby.so.2.6
+export LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib:$LD_LIBRARY_PATH"
 
-# Try to extract the tarball
-tar -xzf "$custom_ruby_tarball_path" -C "$ruby_install_dir"
+unset GEM_PATH
 
-# Print the exit status of the tar command
-echo "Tar command exit status: $?"
+if detect_needs_java "$BUILD_DIR"; then
+  cat <<EOM
 
-# List the contents of the destination directory
-ls -l "$ruby_install_dir"
+       ## Warning: Your app needs java
 
-# The script should now exit with the error
+       The Ruby buildpack determined your app needs java installed
+       we recommend you add the jvm buildpack to your application:
+
+         $ heroku buildpacks:add heroku/jvm --index=1
+
+-----> Installing Java
+
+EOM
+
+  compile_buildpack_v2 "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR" "https://buildpack-registry.s3.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz" "heroku/jvm"
+fi
+
+"$bootstrap_ruby_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
