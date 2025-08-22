@@ -27,16 +27,17 @@ custom_ruby_tarball_path="$BIN_DIR/vendor/ruby-custom/ruby-2.6.9.tar.gz"
 # We also check the Ruby version in the Gemfile to ensure we use the custom version
 # only when it's requested by the app.
 if [ -f "$custom_ruby_tarball_path" ] && grep -q "ruby '2.6.9'" "$BUILD_DIR/Gemfile"; then
-  echo "-----> Using custom-compiled Ruby 2.6.9 from buildpack."
+  # Notice the `>&2` at the end of the line
+  echo "-----> Using custom-compiled Ruby 2.6.9 from buildpack." >&2
 
   # --- DEBUGGING COMMANDS ---
-  echo "Current working directory:"
-  pwd
-  echo "Listing contents of the buildpack's bin directory:"
-  ls -l "$BIN_DIR"
-  echo "Listing contents of the custom vendor directory:"
-  ls -l "$BIN_DIR/vendor/ruby-custom/"
-  echo "Attempting to extract from: $custom_ruby_tarball_path"
+  echo "Current working directory:" >&2
+  pwd >&2
+  echo "Listing contents of the buildpack's vendor directory:" >&2
+  ls -l "$BIN_DIR/vendor/" >&2
+  echo "Listing contents of the custom vendor directory:" >&2
+  ls -l "$BIN_DIR/vendor/ruby-custom/" >&2
+  echo "Attempting to extract from: $custom_ruby_tarball_path" >&2
   # --- END OF DEBUGGING COMMANDS ---
 
   # Create the installation directory and extract the tarball.
