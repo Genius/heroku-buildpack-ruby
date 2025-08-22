@@ -20,7 +20,7 @@ trap 'rm -rf "$bootstrap_ruby_dir"' EXIT
 
 export PATH="$bootstrap_ruby_dir/bin/:$PATH"
 export LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib:${LD_LIBRARY_PATH:-}"
-export RUBYLIB="$bootstrap_ruby_dir/lib:${RUBYLIB:-}"
+export RUBYLIB="$bootstrap_ruby_dir/lib/ruby/2.6.0:${RUBYLIB:-}"
 
 unset GEM_PATH
 
