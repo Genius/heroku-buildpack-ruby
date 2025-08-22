@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# The actual compilation code lives in `bin/support/ruby_compile`. This file instead
-# bootstraps the ruby needed and then executes `bin/support/ruby_compile`
+# This script compiles Ruby with a specific OpenSSL version directly on the Heroku stack.
 
 set -euo pipefail
 
@@ -14,34 +13,52 @@ source "$BIN_DIR/support/bash_functions.sh"
 
 checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
 
-bootstrap_ruby_dir=$(mktemp -d)
-"$BIN_DIR"/support/download_ruby "$BIN_DIR" "$bootstrap_ruby_dir"
-trap 'rm -rf "$bootstrap_ruby_dir"' EXIT
+# --- Install build-time dependencies ---
+echo "-----> Installing build dependencies"
+apt-get update && apt-get install -y --no-install-recommends \
+  build-essential \
+  curl \
+  libgmp-dev \
+  zlib1g-dev
 
-export PATH="$bootstrap_ruby_dir/bin:$PATH"
-export LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib:${LD_LIBRARY_PATH:-}"
+# --- Define installation paths ---
+ruby_install_dir="$BUILD_DIR/vendor/ruby-2.6.9"
+openssl_install_dir="$BUILD_DIR/vendor/openssl-1.1.1u"
 
-# FIX: Use RUBYOPT to pass the library path, which is more reliable than -I
-# This ensures that all Ruby commands inherit the correct path.
-export RUBYOPT="-I$bootstrap_ruby_dir/lib -I$bootstrap_ruby_dir/lib/ruby/2.6.0 -I$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0 -I$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0/x86_64-linux"
+# Create installation directories
+mkdir -p "$ruby_install_dir" "$openssl_install_dir"
 
-unset GEM_PATH
+# --- Compile and install OpenSSL 1.1.1u ---
+echo "-----> Compiling and installing OpenSSL 1.1.1u"
+curl -L -o /tmp/openssl-1.1.1u.tar.gz https://www.openssl.org/source/openssl-1.1.1u.tar.gz
+tar -xzf /tmp/openssl-1.1.1u.tar.gz -C /tmp
 
-if detect_needs_java "$BUILD_DIR"; then
-  cat <<EOM
+cd /tmp/openssl-1.1.1u
+./config --prefix="$openssl_install_dir" shared
+make
+make install
 
-       ## Warning: Your app needs java
+# --- Compile and install Ruby 2.6.9 ---
+echo "-----> Compiling and installing Ruby 2.6.9"
+curl -L -o /tmp/ruby-2.6.9.tar.gz https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.9.tar.gz
+tar -xzf /tmp/ruby-2.6.9.tar.gz -C /tmp
 
-       The Ruby buildpack determined your app needs java installed
-       we recommend you add the jvm buildpack to your application:
+cd /tmp/ruby-2.6.9
+./configure --prefix="$ruby_install_dir" --with-openssl-dir="$openssl_install_dir"
+make
+make install
 
-         $ heroku buildpacks:add heroku/jvm --index=1
+# --- Clean up source code ---
+echo "-----> Cleaning up temporary files"
+rm -rf /tmp/openssl-1.1.1u /tmp/openssl-1.1.1u.tar.gz
+rm -rf /tmp/ruby-2.6.9 /tmp/ruby-2.6.9.tar.gz
 
------> Installing Java
+# --- Set environment variables for the build ---
+echo "-----> Setting up environment variables"
+export PATH="$ruby_install_dir/bin:$PATH"
+export LD_LIBRARY_PATH="$ruby_install_dir/lib:$openssl_install_dir/lib:${LD_LIBRARY_PATH:-}"
 
-EOM
-
-  compile_buildpack_v2 "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR" "https://buildpack-registry.s3.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz" "heroku/jvm"
-fi
-
-"$bootstrap_ruby_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
+# The rest of your script
+# You will no longer need the 'download_ruby' function.
+# The `ruby` command will now be found in $PATH.
+"$ruby_install_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
