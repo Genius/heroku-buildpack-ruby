@@ -89,4 +89,17 @@ fi
 # Return to the original directory
 popd
 
+# --- Persist environment variables for runtime ---
+echo "-----> Persisting environment variables"
+
+# Set the final runtime path
+cat > "$ENV_DIR/PATH.d/ruby_path.sh" <<EOL
+export PATH="$ruby_install_dir/bin:\$PATH"
+EOL
+
+# Set the final runtime LD_LIBRARY_PATH
+cat > "$ENV_DIR/LD_LIBRARY_PATH.d/ruby_libs.sh" <<EOL
+export LD_LIBRARY_PATH="$ruby_install_dir/lib:\$LD_LIBRARY_PATH"
+EOL
+
 echo "-----> Buildpack finished successfully!"
