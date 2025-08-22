@@ -92,6 +92,10 @@ popd
 # --- Persist environment variables for runtime ---
 echo "-----> Persisting environment variables"
 
+# Create the directories before writing files into them
+mkdir -p "$ENV_DIR/PATH.d"
+mkdir -p "$ENV_DIR/LD_LIBRARY_PATH.d"
+
 # Set the final runtime path
 cat > "$ENV_DIR/PATH.d/ruby_path.sh" <<EOL
 export PATH="$ruby_install_dir/bin:\$PATH"
