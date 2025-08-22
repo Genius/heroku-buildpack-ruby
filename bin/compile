@@ -67,9 +67,12 @@ echo "-----> Setting up environment variables"
 export PATH="$ruby_install_dir/bin:$PATH"
 export LD_LIBRARY_PATH="$ruby_install_dir/lib:$openssl_install_dir/lib:${LD_LIBRARY_PATH:-}"
 
-# --- Install Bundler and Gems ---
+# --- Change to application directory before running bundle install ---
+pushd "$APP_PATH"
+
 echo "-----> Installing Bundler"
-"$ruby_install_dir"/bin/gem install bundler -v '2.3.26' --no-document --no-user-install
+bundle_version='2.3.26'
+"$ruby_install_dir"/bin/gem install bundler -v "$bundle_version" --no-document --no-user-install
 
 echo "-----> Installing application gems"
 # This command runs Bundler and installs gems into a vendor directory
@@ -82,5 +85,8 @@ if grep -q "rails" "$APP_PATH/Gemfile.lock"; then
   # This section assumes a standard Rails app.
   "$ruby_install_dir"/bin/bundle exec rake assets:precompile
 fi
+
+# Return to the original directory
+popd
 
 echo "-----> Buildpack finished successfully!"
