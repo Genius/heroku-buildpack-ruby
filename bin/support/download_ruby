@@ -26,22 +26,8 @@ curl_retry_on_18() {
 }
 
 ruby_url() {
-  local stack=$1
-  local version=$2
-
-  if [[ "$version" = "2.6.9" ]]; then
-    # This points to the file we placed in the vendor directory.
-    echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com}/ruby-2.6.9.tar.gz"
-    return
-  fi
-
-  if [ "$stack" == "heroku-24" ]; then
-    local arch
-    arch=$(dpkg --print-architecture)
-    echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-ruby.s3.us-east-1.amazonaws.com}/$stack/$arch/ruby-$version.tgz"
-  else
-    echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-ruby.s3.us-east-1.amazonaws.com}/$stack/ruby-$version.tgz"
-  fi
+  echo "${BUILDPACK_VENDOR_URL:-https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com}/ruby-2.6.9.tar.gz"
+  return
 }
 
 # Pull ruby version out of buildpack.toml to be used with bootstrapping
