@@ -12,7 +12,7 @@ ruby_install_dir="$BUILD_DIR/vendor/ruby-2.6.9"
 mkdir -p "$ruby_install_dir"
 
 # Download your pre-compiled Ruby from a hosted location (e.g., GitHub Releases, S3)
-curl -L https://your-host.com/ruby-2.6.9.tar.gz | tar -xz -C "$ruby_install_dir"
+curl -L https://heroku-buildpack-rg.s3.us-east-1.amazonaws.com/ruby-2.6.9.tar.gz | tar -xz -C "$ruby_install_dir"
 
 # Write the Ruby version to a file the official buildpack can read
 echo "ruby-2.6.9" > "$BUILD_DIR/.ruby-version"
