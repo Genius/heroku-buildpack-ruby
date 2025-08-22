@@ -9,7 +9,7 @@ CACHE_DIR=$2
 ENV_DIR=$3
 BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-# This line ensures we source the helper functions from the official buildpack
+# shellcheck source=bin/support/bash_functions.sh
 source "$BIN_DIR/support/bash_functions.sh"
 
 checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
@@ -20,46 +20,53 @@ apt-get update && apt-get install -y --no-install-recommends \
   build-essential \
   curl \
   libgmp-dev \
-  zlib1g-dev \
-  libssl-dev
+  zlib1g-dev
 
 # Define installation paths
 ruby_install_dir="$BUILD_DIR/vendor/ruby-2.6.9"
+openssl_install_dir="$BUILD_DIR/vendor/openssl-1.1.1u"
 
 # Create installation directories
-mkdir -p "$ruby_install_dir"
+mkdir -p "$ruby_install_dir" "$openssl_install_dir"
 
-# --- Compile and install Ruby 2.6.9 with OpenSSL 1.1.1 ---
-echo "-----> Compiling and installing Ruby 2.6.9 with OpenSSL"
+# --- Compile and install OpenSSL 1.1.1u ---
+echo "-----> Compiling and installing OpenSSL 1.1.1u"
+curl -L -o /tmp/openssl-1.1.1u.tar.gz https://www.openssl.org/source/openssl-1.1.1u.tar.gz
+tar -xzf /tmp/openssl-1.1.1u.tar.gz -C /tmp
+
+# Use pushd to save the current directory and move into the source folder
+pushd /tmp/openssl-1.1.1u
+  ./config --prefix="$openssl_install_dir" shared
+  make
+  make install
+# Use popd to return to the original directory
+popd
+
+# --- Compile and install Ruby 2.6.9 ---
+echo "-----> Compiling and installing Ruby 2.6.9"
 curl -L -o /tmp/ruby-2.6.9.tar.gz https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.9.tar.gz
 tar -xzf /tmp/ruby-2.6.9.tar.gz -C /tmp
 
-# Use a temporary directory for compilation to keep the main build clean
-compile_dir=$(mktemp -d)
-pushd "$compile_dir"
-
-# Configure and install Ruby with the system's OpenSSL
-cd /tmp/ruby-2.6.9
-./configure --prefix="$ruby_install_dir"
-make
-make install
-
-# Clean up source code
-echo "-----> Cleaning up temporary files"
-rm -rf /tmp/ruby-2.6.9 /tmp/ruby-2.6.9.tar.gz
-rm -rf "$compile_dir"
-
-# Return to the original directory
+# Use pushd to save the current directory and move into the source folder
+pushd /tmp/ruby-2.6.9
+  ./configure --prefix="$ruby_install_dir" --with-openssl-dir="$openssl_install_dir"
+  make
+  make install
+# Use popd to return to the original directory
 popd
+
+# --- Clean up source code ---
+echo "-----> Cleaning up temporary files"
+rm -rf /tmp/openssl-1.1.1u /tmp/openssl-1.1.1u.tar.gz
+rm -rf /tmp/ruby-2.6.9 /tmp/ruby-2.6.9.tar.gz
 
 # --- Set environment variables for the build ---
 echo "-----> Setting up environment variables"
 export PATH="$ruby_install_dir/bin:$PATH"
-export LD_LIBRARY_PATH="$ruby_install_dir/lib:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH="$ruby_install_dir/lib:$openssl_install_dir/lib:${LD_LIBRARY_PATH:-}"
 
 unset GEM_PATH
 
-# Now the rest of the original script that uses Ruby can run
 if detect_needs_java "$BUILD_DIR"; then
   cat <<EOM
        ## Warning: Your app needs java
