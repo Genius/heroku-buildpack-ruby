@@ -20,11 +20,9 @@ checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
 # `vendor/ruby-custom` is where you placed your tarball.
 # The `ruby_install_dir` is where the tarball will be extracted.
 ruby_install_dir="$BUILD_DIR/vendor/ruby-custom/usr/local/ruby-2.6.9"
-custom_ruby_tarball_path="$BIN_DIR/vendor/ruby-custom/ruby-2.6.9.tar.gz"
+custom_ruby_tarball_path="$(dirname "$BIN_DIR")/vendor/ruby-custom/ruby-2.6.9.tar.gz"
 
 # Check if the custom Ruby tarball exists.
-# We also check the Ruby version in the Gemfile to ensure we use the custom version
-# only when it's requested by the app.
 if [ -f "$custom_ruby_tarball_path" ] && grep -q "ruby '2.6.9'" "$BUILD_DIR/Gemfile"; then
   echo "-----> Using custom-compiled Ruby 2.6.9 from buildpack."
 
