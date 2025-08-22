@@ -18,10 +18,12 @@ bootstrap_ruby_dir=$(mktemp -d)
 "$BIN_DIR"/support/download_ruby "$BIN_DIR" "$bootstrap_ruby_dir"
 trap 'rm -rf "$bootstrap_ruby_dir"' EXIT
 
-# These exports are for clarity and for any sub-processes
 export PATH="$bootstrap_ruby_dir/bin:$PATH"
 export LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib:${LD_LIBRARY_PATH:-}"
-export RUBYLIB="$bootstrap_ruby_dir/lib:$bootstrap_ruby_dir/lib/ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0/x86_64-linux:${RUBYLIB:-}"
+
+# FIX: Use RUBYOPT to pass the library path, which is more reliable than -I
+# This ensures that all Ruby commands inherit the correct path.
+export RUBYOPT="-I$bootstrap_ruby_dir/lib -I$bootstrap_ruby_dir/lib/ruby/2.6.0 -I$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0 -I$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0/x86_64-linux"
 
 unset GEM_PATH
 
@@ -42,5 +44,4 @@ EOM
   compile_buildpack_v2 "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR" "https://buildpack-registry.s3.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz" "heroku/jvm"
 fi
 
-# FINAL FIX: Set all required environment variables directly on the command line
-LD_LIBRARY_PATH="$bootstrap_ruby_dir/lib" RUBYLIB="$bootstrap_ruby_dir/lib:$bootstrap_ruby_dir/lib/ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0:$bootstrap_ruby_dir/lib/ruby/site_ruby/2.6.0/x86_64-linux" "$bootstrap_ruby_dir"/bin/ruby -I"$bootstrap_ruby_dir/lib" "$BIN_DIR/support/ruby_compile" "$@"
+"$bootstrap_ruby_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
