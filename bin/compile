@@ -19,7 +19,7 @@ checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
 # Define the paths for your custom Ruby.
 # `vendor/ruby-custom` is where you placed your tarball.
 # The `ruby_install_dir` is where the tarball will be extracted.
-ruby_install_dir="$BUILD_DIR/vendor/ruby-custom"
+ruby_install_dir="$BUILD_DIR/vendor/ruby-custom/usr/local/ruby-2.6.9"
 custom_ruby_tarball_path="$BIN_DIR/vendor/ruby-custom/ruby-2.6.9.tar.gz"
 
 # Check if the custom Ruby tarball exists.
@@ -33,10 +33,10 @@ if [ -f "$custom_ruby_tarball_path" ] && grep -q "ruby '2.6.9'" "$BUILD_DIR/Gemf
   tar -xzf "$custom_ruby_tarball_path" -C "$ruby_install_dir"
   
   # Set the PATH to include the custom Ruby's binaries
-  export PATH="$ruby_install_dir/ruby-2.6.9/bin:$PATH"
+  export PATH="$ruby_install_dir/bin:$PATH"
   
   # Set the LD_LIBRARY_PATH to tell the system where to find the shared libraries
-  export LD_LIBRARY_PATH="$ruby_install_dir/ruby-2.6.9/lib:$LD_LIBRARY_PATH"
+  export LD_LIBRARY_PATH="$ruby_install_dir/lib:$LD_LIBRARY_PATH"
   
   # The original script uses `unset GEM_PATH`, we'll do the same here for consistency.
   unset GEM_PATH
