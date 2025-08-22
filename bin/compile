@@ -71,3 +71,7 @@ fi
 
 # This line should now use your custom Ruby's path
 "$ruby_install_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
+
+# Add this line to the very end of your bin/compile script
+# It will cause the script to hang and wait for your input
+bash
