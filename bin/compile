@@ -89,21 +89,14 @@ fi
 # Return to the original directory
 popd
 
-# --- Persist environment variables for runtime ---
-echo "-----> Persisting environment variables"
+# --- Create symlinks for runtime ---
+echo "-----> Creating symlinks for runtime"
 
-# Create the directories before writing files into them
-mkdir -p "$ENV_DIR/PATH.d"
-mkdir -p "$ENV_DIR/LD_LIBRARY_PATH.d"
+# Ensure the app's bin directory exists
+mkdir -p "$APP_PATH/bin"
 
-# Set the final runtime path
-cat > "$ENV_DIR/PATH.d/ruby_path.sh" <<EOL
-export PATH="$ruby_install_dir/bin:\$PATH"
-EOL
-
-# Set the final runtime LD_LIBRARY_PATH
-cat > "$ENV_DIR/LD_LIBRARY_PATH.d/ruby_libs.sh" <<EOL
-export LD_LIBRARY_PATH="$ruby_install_dir/lib:\$LD_LIBRARY_PATH"
-EOL
+# Create symlinks to the custom Ruby and Bundler binaries
+ln -sf "$ruby_install_dir/bin/ruby" "$APP_PATH/bin/ruby"
+ln -sf "$ruby_install_dir/bin/bundle" "$APP_PATH/bin/bundle"
 
 echo "-----> Buildpack finished successfully!"
