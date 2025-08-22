@@ -1,77 +1,30 @@
 #!/usr/bin/env bash
-# The actual compilation code lives in `bin/support/ruby_compile`. This file instead
-# bootstraps the ruby needed and then executes `bin/support/ruby_compile`
 
-set -euo pipefail
+# This will print every command as it's being executed
+set -x
 
 BUILD_DIR=$1
-CACHE_DIR=$2
-ENV_DIR=$3
-BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd) # absolute path
+BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-# shellcheck source=bin/support/bash_functions.sh
-source "$BIN_DIR/support/bash_functions.sh"
-
-checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
-
-# --- START OF MODIFIED CODE BLOCK ---
-
-# Define the paths for your custom Ruby.
-# `vendor/ruby-custom` is where you placed your tarball.
-# The `ruby_install_dir` is where the tarball will be extracted.
-ruby_install_dir="$BUILD_DIR/vendor/ruby-custom/usr/local/ruby-2.6.9"
+# Define the path to your tarball
 custom_ruby_tarball_path="$(dirname "$BIN_DIR")/vendor/ruby-custom/ruby-2.6.9.tar.gz"
 
-# Check if the custom Ruby tarball exists.
-if [ -f "$custom_ruby_tarball_path" ] && grep -q "ruby '2.6.9'" "$BUILD_DIR/Gemfile"; then
-  echo "-----> Using custom-compiled Ruby 2.6.9 from buildpack."
+# Define the path where the tarball should be extracted
+ruby_install_dir="$BUILD_DIR/vendor/ruby-custom"
 
-  # Create the installation directory and extract the tarball.
-  mkdir -p "$ruby_install_dir"
-  tar -xzf "$custom_ruby_tarball_path" -C "$ruby_install_dir"
-  
-  # Set the PATH to include the custom Ruby's binaries
-  export PATH="$ruby_install_dir/bin:$PATH"
-  
-  # Set the LD_LIBRARY_PATH to tell the system where to find the shared libraries
-  export LD_LIBRARY_PATH="$ruby_install_dir/lib:$LD_LIBRARY_PATH"
-  
-  # The original script uses `unset GEM_PATH`, we'll do the same here for consistency.
-  unset GEM_PATH
-else
-  # This is the original logic for other Ruby versions.
-  # If the custom Ruby isn't found or a different version is requested,
-  # it will fall back to Heroku's default behavior.
-  bootstrap_ruby_dir=$(mktemp -d)
-  "$BIN_DIR"/support/download_ruby "$BIN_DIR" "$bootstrap_ruby_dir"
-  trap 'rm -rf "$bootstrap_ruby_dir"' EXIT
+# Show the path we are about to use
+echo "Attempting to extract tarball from: $custom_ruby_tarball_path"
 
-  export PATH="$bootstrap_ruby_dir/bin/:$PATH"
-  unset GEM_PATH
-fi
+# List the contents of the directory containing the tarball
+ls -l "$(dirname "$custom_ruby_tarball_path")"
 
-# --- END OF MODIFIED CODE BLOCK ---
+# Try to extract the tarball
+tar -xzf "$custom_ruby_tarball_path" -C "$ruby_install_dir"
 
-if detect_needs_java "$BUILD_DIR"; then
-  cat <<EOM
+# Print the exit status of the tar command
+echo "Tar command exit status: $?"
 
-       ## Warning: Your app needs java
+# List the contents of the destination directory
+ls -l "$ruby_install_dir"
 
-       The Ruby buildpack determined your app needs java installed
-       we recommend you add the jvm buildpack to your application:
-
-         $ heroku buildpacks:add heroku/jvm --index=1
-
------> Installing Java
-
-EOM
-
-  compile_buildpack_v2 "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR" "https://buildpack-registry.s3.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz" "heroku/jvm"
-fi
-
-# This line should now use your custom Ruby's path
-"$ruby_install_dir"/bin/ruby "$BIN_DIR/support/ruby_compile" "$@"
-
-# Add this line to the very end of your bin/compile script
-# It will cause the script to hang and wait for your input
-bash
+# The script should now exit with the error
