@@ -1,102 +1,20 @@
 #!/usr/bin/env bash
-# This script is a hybrid that compiles a custom Ruby version and then uses the
-# official Heroku buildpack's language pack to finish the build.
-
-set -euo pipefail
 
 BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
-BIN_DIR=$(cd "$(dirname "$0")" || exit; pwd)
-APP_PATH="$BUILD_DIR"
-VENDOR_DIR="$APP_PATH/vendor"
 
-# shellcheck source=bin/support/bash_functions.sh
-source "$BIN_DIR/support/bash_functions.sh"
+echo "-----> Custom Ruby buildpack"
+echo "-----> Downloading and installing Ruby 2.6.9"
 
-checks::ensure_supported_stack "${STACK:?Required env var STACK is not set}"
-
-# --- Install build-time dependencies ---
-echo "-----> Installing build dependencies"
-apt-get update && apt-get install -y --no-install-recommends \
-  build-essential \
-  curl \
-  libgmp-dev \
-  zlib1g-dev
-
-# Define installation paths
+# Define the installation path
 ruby_install_dir="$BUILD_DIR/vendor/ruby-2.6.9"
-openssl_install_dir="$BUILD_DIR/vendor/openssl-1.1.1u"
+mkdir -p "$ruby_install_dir"
 
-# Create installation directories
-mkdir -p "$ruby_install_dir" "$openssl_install_dir"
+# Download your pre-compiled Ruby from a hosted location (e.g., GitHub Releases, S3)
+curl -L https://your-host.com/ruby-2.6.9.tar.gz | tar -xz -C "$ruby_install_dir"
 
-# --- Compile and install OpenSSL 1.1.1u ---
-echo "-----> Compiling and installing OpenSSL 1.1.1u"
-curl -L -o /tmp/openssl-1.1.1u.tar.gz https://www.openssl.org/source/openssl-1.1.1u.tar.gz
-tar -xzf /tmp/openssl-1.1.1u.tar.gz -C /tmp
+# Write the Ruby version to a file the official buildpack can read
+echo "ruby-2.6.9" > "$BUILD_DIR/.ruby-version"
 
-# Use pushd to save the current directory and move into the source folder
-pushd /tmp/openssl-1.1.1u
-  ./config --prefix="$openssl_install_dir" shared
-  make
-  make install
-# Use popd to return to the original directory
-popd
-
-# --- Compile and install Ruby 2.6.9 ---
-echo "-----> Compiling and installing Ruby 2.6.9"
-curl -L -o /tmp/ruby-2.6.9.tar.gz https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.9.tar.gz
-tar -xzf /tmp/ruby-2.6.9.tar.gz -C /tmp
-
-# Use pushd to save the current directory and move into the source folder
-pushd /tmp/ruby-2.6.9
-  ./configure --prefix="$ruby_install_dir" --with-openssl-dir="$openssl_install_dir"
-  make
-  make install
-# Use popd to return to the original directory
-popd
-
-# --- Clean up source code ---
-echo "-----> Cleaning up temporary files"
-rm -rf /tmp/openssl-1.1.1u /tmp/openssl-1.1.1u.tar.gz
-rm -rf /tmp/ruby-2.6.9 /tmp/ruby-2.6.9.tar.gz
-
-# --- Set environment variables for the build ---
-echo "-----> Setting up environment variables"
-export PATH="$ruby_install_dir/bin:$PATH"
-export LD_LIBRARY_PATH="$ruby_install_dir/lib:$openssl_install_dir/lib:${LD_LIBRARY_PATH:-}"
-
-# --- Change to application directory before running bundle install ---
-pushd "$APP_PATH"
-
-echo "-----> Installing Bundler"
-bundle_version='2.3.26'
-"$ruby_install_dir"/bin/gem install bundler -v "$bundle_version" --no-document --no-user-install
-
-echo "-----> Installing application gems"
-# This command runs Bundler and installs gems into a vendor directory
-"$ruby_install_dir"/bin/bundle install --path "$VENDOR_DIR/bundle" --without development:test --jobs $(nproc)
-
-# --- Precompile assets for Rails apps ---
-if grep -q "rails" "$APP_PATH/Gemfile.lock"; then
-  echo "-----> Detecting Rails application"
-  echo "-----> Precompiling assets"
-  # This section assumes a standard Rails app.
-  "$ruby_install_dir"/bin/bundle exec rake assets:precompile
-fi
-
-# Return to the original directory
-popd
-
-# --- Create symlinks for runtime ---
-echo "-----> Creating symlinks for runtime"
-
-# Ensure the app's bin directory exists
-mkdir -p "$APP_PATH/bin"
-
-# Create symlinks to the custom Ruby and Bundler binaries
-ln -sf "$ruby_install_dir/bin/ruby" "$APP_PATH/bin/ruby"
-ln -sf "$ruby_install_dir/bin/bundle" "$APP_PATH/bin/bundle"
-
-echo "-----> Buildpack finished successfully!"
+echo "-----> Custom Ruby installation complete"
