@@ -127,13 +127,13 @@ class LanguagePack::Ruby < LanguagePack::Base
     bundle_list = LanguagePack::Helpers::BundleList::HumanCommand.new(
       stream_to_user: stream_to_user
     ).call
-    differences = bundler.specs.filter_map do |(name, spec)|
+    differences = bundler.specs.map do |(name, spec)|
       expected = Gem::Version.new(spec.version)
       actual = bundle_list.gem_version(name)
       if expected != actual
         "#{name}: (`#{expected}` `#{actual}`)"
       end
-    end
+    end.compact
 
     if !differences.empty?
       @report.capture(

@@ -37,12 +37,13 @@ class LanguagePack::Helpers::BundlerWrapper
 
   BLESSED_BUNDLER_VERSIONS = {}
   # Heroku-22's oldest Ruby version is 3.1
+  BLESSED_BUNDLER_VERSIONS["2.1"] = "2.1.4"
   BLESSED_BUNDLER_VERSIONS["2.3"] = "2.3.25"
   BLESSED_BUNDLER_VERSIONS["2.4"] = "2.4.22"
   BLESSED_BUNDLER_VERSIONS["2.5"] = "2.5.23"
   BLESSED_BUNDLER_VERSIONS["2.6"] = "2.6.2"
 
-  DEFAULT_VERSION = BLESSED_BUNDLER_VERSIONS["2.3"]
+  DEFAULT_VERSION = BLESSED_BUNDLER_VERSIONS["2.1"]
 
   # Convert arbitrary `<Major>.<Minor>.x` versions
   BLESSED_BUNDLER_VERSIONS.default_proc = Proc.new do |hash, key|

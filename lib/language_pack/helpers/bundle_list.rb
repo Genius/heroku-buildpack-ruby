@@ -31,7 +31,6 @@ module LanguagePack::Helpers
     #    ).call
     class HumanCommand
       include LanguagePack::ShellHelpers
-      private attr_reader :stream_to_user, :io
 
       def initialize(stream_to_user:, io: self)
         @io = io
@@ -56,6 +55,10 @@ module LanguagePack::Helpers
           raise CmdError.new(output: output, command: command)
         end
       end
+
+      private 
+      
+      attr_reader :stream_to_user, :io
     end
 
     def initialize(output: )
